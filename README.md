@@ -56,6 +56,19 @@ uv sync
 - 跑：`.venv/bin/satsim configs/exp_orbit_planes_s1_cost_claims_v1.yaml`；ADR：`docs/adr/0003-orbit-planes-topology-snapshot.md`。
 
 
+## 自热 + 批次/异构（`exp_ring_s1_dynamic_batch_hetero_v1`）
+
+假设：pack 占用 + 轻度 per-node 热异构 → 自热下也能拉开 C1。seeds 1–3：
+
+| 臂 | good_long ↑ | goodput_slo ↑ | tok/s | peakT | n_thr |
+|---|---|---|---|---|---|
+| place_once | 1.0 | 32.8 | 254.9 | 86.7 | 1.3 |
+| **free** | **10.0 (+900%)** | **192.8 (+488%)** | 254.9 | 86.8 | 4.0 |
+| random | 6.0 (+500%) | 121.7 (+271%) | 254.9 | 86.8 | 4.0 |
+
+- **是**：free ≫ 首次出现；**针是 pack/max_busy**，异构 alone 仍失败（见消融）。
+- 诚实：首次绝对分塌到 ~1（热堆在 1–2 星）；free 绝对值仍低于显式 t_swap 表。细节：`docs/notes/dynamic_thermal_batch_hetero.md`。
+
 ## 自热 dynamic 试跑（`exp_ring_s1_dynamic_thermal_v1`）
 
 `thermal.mode=dynamic` 对齐 s1 负载；**尚未**造出 C1（free ≫ place_once）。seeds 1–3：good_long 首次 12.0 / free 8.67（−28%）/ random 3.0；req/s·tok/s 全臂持平；四节点均进节流。细节与下一旋钮：`docs/notes/dynamic_thermal_cost_claims.md`。

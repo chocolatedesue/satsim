@@ -33,3 +33,5 @@
 - `exp_orbit_planes_estar_contention_v1.yaml` → E★ 加压（脚本入口）
 
 三档 id：`place_once`｜`rebalance_free`｜`rebalance_random`｜`rebalance_ours`（TODO）。术语见根目录 `GLOSSARY.md`；主表见 `README.md`。
+- `exp_ring_s1_dynamic_batch_hetero_v1` — dynamic + pack/max_busy + mild thermal hetero (C1 probe)
+- `exp_ring_s1_dynamic_batch_v1` / `exp_ring_s1_dynamic_hetero_v1` — ablations

@@ -1,0 +1,50 @@
+# 仅 pack+max_busy（同质热），对照：看异构是否必要。
+nodes: 4
+topology: ring
+arrival_window_s: 900.0
+drain_s: 1200
+control_period_s: 1.0
+placement:
+  mode: pack
+  max_busy_nodes: 2
+model:
+  layers: 32
+  kv_heads: 8
+  head_dim: 128
+  bytes_per_elem: 2
+gpu:
+  kv_gib: 24.0
+  t_fixed_s: 0.003
+  t_weights_s: 0.01
+  t_kv_tok_s: 1.0e-7
+  t_seq_s: 5.0e-5
+  mem_freq_exp: 0.6
+thermal:
+  mode: dynamic
+  P_idle: 60
+  P_max: 300
+  gamma: 2.4
+  f_min: 0.35
+  tau_s: 25.0
+  R_th: 0.45
+  T_amb_C: 20.0
+  T0_C: 50.0
+  T_throttle_C: 84.0
+  T_release_C: 78.0
+  f_throttle: 0.40
+  P_busy: 300.0
+net:
+  link_gbps: 10.0
+  hop_latency_s: 0.005
+background:
+  gbps_per_node: 2.375
+  strict_priority: true
+  pairs:
+    - [0, 2]
+    - [1, 2]
+cost:
+  mode: free
+  timeout_s: 120.0
+  switch_s: 0.02
+workload:
+  p_long: 0.2

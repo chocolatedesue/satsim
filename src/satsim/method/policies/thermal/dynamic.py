@@ -2,11 +2,29 @@
 
 默认阈值来自既有 lab 叙事（LAB-1178/1214）：约 84°C 触发、地板约 0.71×；
 不是把外部 A100 标定直接当本仓物理真理，YAML 可改。
+
+可选 per-node 异构：R_th_by_node / tau_s_by_node / T0_C_by_node / sun_bias_C_by_node
+（或同名标量 + 可选 sun_bias_C），避免全员同步过阈后动作空间为空。
 """
 from __future__ import annotations
 
 import math
 from typing import Sequence
+
+
+def _resolve_per_node(thermal: dict, key: str, n: int, *, default: float | None = None) -> list[float]:
+    """标量 key、可选 {key}_by_node 列表，或仅 by_node。"""
+    by = f"{key}_by_node"
+    if by in thermal:
+        vals = thermal[by]
+        if not isinstance(vals, (list, tuple)) or len(vals) != n:
+            raise ValueError(f"thermal.{by} 长度必须为 nodes={n}")
+        return [float(x) for x in vals]
+    if key in thermal:
+        return [float(thermal[key])] * n
+    if default is not None:
+        return [float(default)] * n
+    raise KeyError(key)
 
 
 class DynamicThermal:
@@ -15,8 +33,6 @@ class DynamicThermal:
     def __init__(self, thermal: dict, *, n: int):
         self._th = thermal
         self.n = n
-        self.tau_s = float(thermal["tau_s"])
-        self.R_th = float(thermal["R_th"])
         self.T_amb_C = float(thermal["T_amb_C"])
         self.T_throttle_C = float(thermal["T_throttle_C"])
         self.T_release_C = float(thermal["T_release_C"])
@@ -26,9 +42,15 @@ class DynamicThermal:
         self.P_max = float(thermal["P_max"])
         self.gamma = float(thermal["gamma"])
         self.f_min = float(thermal["f_min"])
-        T0 = float(thermal["T0_C"])
-        self._T = [T0] * n
-        self._throttled = [T0 >= float(thermal["T_throttle_C"])] * n
+        # 标量仍写入属性，便于旧测试/诊断读「全局」值；步进用 per-node 列表
+        self.tau_s = float(thermal["tau_s"])
+        self.R_th = float(thermal["R_th"])
+        self._tau = _resolve_per_node(thermal, "tau_s", n)
+        self._R_th = _resolve_per_node(thermal, "R_th", n)
+        self._sun_bias = _resolve_per_node(thermal, "sun_bias_C", n, default=0.0)
+        T0s = _resolve_per_node(thermal, "T0_C", n)
+        self._T = list(T0s)
+        self._throttled = [t >= float(thermal["T_throttle_C"]) for t in self._T]
         self._f = [1.0] * n
         self._t = 0.0
         self._loads = [0] * n
@@ -73,8 +95,8 @@ class DynamicThermal:
             if self._throttled[j]:
                 self._throttle_time_s[j] += dt
             p = self._power(j)
-            t_eq = self.T_amb_C + self.R_th * p
-            decay = math.exp(-dt / self.tau_s)
+            t_eq = self.T_amb_C + self._sun_bias[j] + self._R_th[j] * p
+            decay = math.exp(-dt / self._tau[j])
             self._T[j] = t_eq + (self._T[j] - t_eq) * decay
             if self._T[j] > self._peak_T[j]:
                 self._peak_T[j] = self._T[j]

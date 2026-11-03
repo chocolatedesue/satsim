@@ -77,5 +77,12 @@ thermal:
   T_release_C: 78.0
   f_throttle: 0.71
   P_busy: 300
+  # 可选轻度异构（长度 == nodes）
+  R_th_by_node: [0.42, 0.45, 0.48, 0.44]
+  sun_bias_C_by_node: [0, 2.5, -1.5, 1.0]
+
+placement:            # 可选
+  mode: pack          # balance | pack
+  max_busy_nodes: 2   # 强制留空闲冷却星
 ```
 

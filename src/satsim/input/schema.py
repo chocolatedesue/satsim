@@ -164,7 +164,22 @@ def _validate_orbit_block(orbit: dict, n: int) -> None:
 
 
 
-def _validate_thermal(th: dict) -> None:
+def _validate_node_list(th: dict, key: str, n: int, *, positive: bool = False) -> None:
+    """可选 {key}_by_node：长度必须 == nodes；元素须为数。"""
+    by = f"{key}_by_node"
+    if by not in th:
+        return
+    vals = th[by]
+    if not isinstance(vals, list) or len(vals) != n:
+        raise SpecError(f"thermal.{by} 长度必须等于 nodes={n}")
+    for i, x in enumerate(vals):
+        if not isinstance(x, (int, float)):
+            raise SpecError(f"thermal.{by}[{i}] 必须是数")
+        if positive and float(x) <= 0:
+            raise SpecError(f"thermal.{by}[{i}] 必须为正")
+
+
+def _validate_thermal(th: dict, n: int | None = None) -> None:
     """DVFS 公共参数必填；mode 缺省为 explicit。dynamic 另要 RC / 节流参数。"""
     if not isinstance(th, dict):
         raise SpecError("thermal 必须是映射")
@@ -187,6 +202,11 @@ def _validate_thermal(th: dict) -> None:
         "T_release_C",
         "f_throttle",
         "P_busy",
+        "sun_bias_C",
+        "tau_s_by_node",
+        "R_th_by_node",
+        "T0_C_by_node",
+        "sun_bias_C_by_node",
     }
     _expect_keys(th, dynamic_keys, "thermal")
     required = {
@@ -216,6 +236,25 @@ def _validate_thermal(th: dict) -> None:
         raise SpecError("thermal.f_throttle 须在 (0, 1]")
     if float(th["f_throttle"]) < float(th["f_min"]):
         raise SpecError("thermal.f_throttle 不得低于 f_min")
+    if n is not None:
+        _validate_node_list(th, "tau_s", n, positive=True)
+        _validate_node_list(th, "R_th", n, positive=True)
+        _validate_node_list(th, "T0_C", n)
+        _validate_node_list(th, "sun_bias_C", n)
+
+
+def _validate_placement(pl: dict, n: int) -> None:
+    """初次放置：balance（默认摊开）| pack（优先填忙节点，留空闲冷却）。"""
+    if not isinstance(pl, dict):
+        raise SpecError("placement 必须是映射")
+    _expect_keys(pl, {"mode", "max_busy_nodes"}, "placement")
+    mode = pl.get("mode", "balance")
+    if mode not in ("balance", "pack"):
+        raise SpecError("placement.mode 只准入 balance | pack")
+    if "max_busy_nodes" in pl:
+        m = pl["max_busy_nodes"]
+        if not isinstance(m, int) or not 1 <= m <= n:
+            raise SpecError(f"placement.max_busy_nodes 须在 1..{n}")
 
 
 def validate_base(cfg: dict) -> None:
@@ -234,6 +273,7 @@ def validate_base(cfg: dict) -> None:
             "background",
             "cost",
             "workload",
+            "placement",  # 可选：balance|pack + max_busy_nodes
             "orbit",  # 仅 topology=orbit_planes 时使用
         },
         "base",
@@ -270,7 +310,7 @@ def validate_base(cfg: dict) -> None:
         },
         "gpu",
     )
-    _validate_thermal(cfg["thermal"])
+    _validate_thermal(cfg["thermal"], n=int(cfg["nodes"]))
     _expect_keys(cfg["net"], {"link_gbps", "hop_latency_s"}, "net")
     _expect_keys(
         cfg["background"],
@@ -283,6 +323,8 @@ def validate_base(cfg: dict) -> None:
     if cfg["cost"]["mode"] not in ("free", "full", "net"):
         raise SpecError("cost.mode 只准入 free/full/net")
     _expect_keys(cfg["workload"], {"p_long"}, "workload")
+    if "placement" in cfg:
+        _validate_placement(cfg["placement"], int(cfg["nodes"]))
     n = cfg["nodes"]
     for pair in cfg["background"]["pairs"]:
         if (

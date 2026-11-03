@@ -114,3 +114,70 @@ def test_dynamic_schema_rejects_bad_hysteresis():
         raise AssertionError("expected SpecError")
     except SpecError as e:
         assert "T_release_C" in str(e)
+
+
+def test_dynamic_per_node_hetero_offsets_throttle():
+    """异构 R_th/sun_bias 下，同负载两节点不应同步首次触阈。"""
+    th = _explicit_cfg(
+        mode="dynamic",
+        tau_s=10.0,
+        R_th=0.5,
+        T_amb_C=20.0,
+        T0_C=40.0,
+        T_throttle_C=84.0,
+        T_release_C=78.0,
+        f_throttle=0.71,
+        P_busy=300.0,
+        R_th_by_node=[0.35, 0.55],
+        sun_bias_C_by_node=[0.0, 5.0],
+    )
+    m = DynamicThermal(th, n=2)
+    t = 0.0
+    first = [None, None]
+    for _ in range(80):
+        t += 1.0
+        m.advance(t, [1, 1])
+        for j in range(2):
+            if first[j] is None and m.clock_factor(j, t) < 1.0:
+                first[j] = t
+        if all(x is not None for x in first):
+            break
+    assert first[0] is not None and first[1] is not None
+    assert first[0] != first[1]
+
+
+def test_dynamic_schema_accepts_by_node():
+    th = _explicit_cfg(
+        mode="dynamic",
+        tau_s=10.0,
+        R_th=0.4,
+        T_amb_C=20.0,
+        T0_C=40.0,
+        T_throttle_C=84.0,
+        T_release_C=78.0,
+        f_throttle=0.71,
+        P_busy=300.0,
+        R_th_by_node=[0.4, 0.41, 0.42, 0.43],
+        sun_bias_C=1.0,
+    )
+    _validate_thermal(th, n=4)
+
+
+def test_dynamic_schema_rejects_bad_by_node_len():
+    th = _explicit_cfg(
+        mode="dynamic",
+        tau_s=10.0,
+        R_th=0.4,
+        T_amb_C=20.0,
+        T0_C=40.0,
+        T_throttle_C=84.0,
+        T_release_C=78.0,
+        f_throttle=0.71,
+        P_busy=300.0,
+        R_th_by_node=[0.4, 0.41],
+    )
+    try:
+        _validate_thermal(th, n=4)
+        raise AssertionError("expected SpecError")
+    except SpecError as e:
+        assert "R_th_by_node" in str(e)

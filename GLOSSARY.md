@@ -68,3 +68,11 @@ _Avoid_: 完整轨道热平衡, 食季 ODE, 已标定 A100 真值
 `thermal.mode: explicit`（缺省）：用 `explicit_events` 写死的 (node,t0,t1,P_cap) 时间线，再经 DVFS 得时钟倍率。
 _Avoid_: 自动温控
 
+
+**批次化占用**:
+`placement.mode: pack` 且可选 `max_busy_nodes`：初次放置优先填已忙节点，保留空闲星冷却，使自热相位错开。
+_Avoid_: 负载均衡摊开（balance）当唯一放置
+
+**节点热异构**:
+`thermal.*_by_node` / `sun_bias_C`：每节点轻度不同的 R_th、tau、T0 或日照偏置，错开过阈时刻；须 YAML 配置。
+_Avoid_: 代码里写死每星参数

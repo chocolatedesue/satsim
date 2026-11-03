@@ -1,0 +1,53 @@
+# 仅热异构（摊开放置），对照 batch+hetero：看 pack/max_busy 是否才是针。
+nodes: 4
+topology: ring
+arrival_window_s: 900.0
+drain_s: 1200
+control_period_s: 1.0
+placement:
+  mode: balance
+model:
+  layers: 32
+  kv_heads: 8
+  head_dim: 128
+  bytes_per_elem: 2
+gpu:
+  kv_gib: 24.0
+  t_fixed_s: 0.003
+  t_weights_s: 0.01
+  t_kv_tok_s: 1.0e-7
+  t_seq_s: 5.0e-5
+  mem_freq_exp: 0.6
+thermal:
+  mode: dynamic
+  P_idle: 60
+  P_max: 300
+  gamma: 2.4
+  f_min: 0.35
+  tau_s: 25.0
+  R_th: 0.45
+  T_amb_C: 20.0
+  T0_C: 50.0
+  T_throttle_C: 84.0
+  T_release_C: 78.0
+  f_throttle: 0.40
+  P_busy: 300.0
+  R_th_by_node: [0.42, 0.45, 0.48, 0.44]
+  tau_s_by_node: [22.0, 25.0, 28.0, 24.0]
+  T0_C_by_node: [48.0, 50.0, 52.0, 49.0]
+  sun_bias_C_by_node: [0.0, 2.5, -1.5, 1.0]
+net:
+  link_gbps: 10.0
+  hop_latency_s: 0.005
+background:
+  gbps_per_node: 2.375
+  strict_priority: true
+  pairs:
+    - [0, 2]
+    - [1, 2]
+cost:
+  mode: free
+  timeout_s: 120.0
+  switch_s: 0.02
+workload:
+  p_long: 0.2

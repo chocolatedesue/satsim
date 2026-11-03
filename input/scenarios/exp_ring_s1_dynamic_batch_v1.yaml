@@ -1,0 +1,42 @@
+# dynamic 自热 + batch_v1：能否造出 C1 向 free≫place_once？
+name: exp_ring_s1_dynamic_batch_v1
+base: base_ring_s1_dynamic_batch.yaml
+trace:
+  kind: synthetic_pass
+  compress_horizon_s: 60
+  pack_window_s: 900
+  target_n: 88
+  jitter_s: 0.05
+  token_pad:
+    mode: floor
+    long_out: 16000
+    long_pin: 8000
+    short_out: 200
+    short_pin: 500
+t_swap:
+  anchor: max_cluster
+  offset_s: 40
+  P_cap: 80
+overrides:
+  arrival_window_s: 900.0
+  background.gbps_per_node: 2.75
+  background.strict_priority: true
+  net.link_gbps: 10.0
+  gpu.kv_gib: 24.0
+policies:
+  place_once:
+    scheduler: place_once
+    link_cost: "off"
+  rebalance_free:
+    scheduler: rebalance_free
+    link_cost: "off"
+    hysteresis: 0.15
+  rebalance_random:
+    scheduler: rebalance_random
+    link_cost: "full"
+seeds: [1, 2, 3]
+slo:
+  tpot_slo: 0.032
+evidence: sim_synthetic_pass_dynamic_batch
+metadata:
+  scene: ../scenes/scene_ring_s1_dynamic_batch_v1.yaml

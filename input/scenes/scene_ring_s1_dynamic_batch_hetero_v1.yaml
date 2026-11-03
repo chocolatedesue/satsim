@@ -1,0 +1,32 @@
+schema: satsim.scene/v1
+name: scene_ring_s1_dynamic_batch_hetero_v1
+story: |
+  同环合成过境；自热 dynamic。用 placement.pack + max_busy_nodes=2 形成批次占用、保留空闲冷却星，
+  并用轻度 per-node 热异构错开过阈相位，检验能否恢复 C1（free≫place_once）。
+not_modeled:
+  - 真实星历和六根数
+  - 时变 ISL
+  - 全星座规模
+  - 完整轨道热平衡/食季（本场景为一阶 RC 示意）
+  - 显式功率帽换位作为热因（改由自热 + 批次/异构）
+  - STAC L1 的真实到达时刻
+mirrors:
+  cfg:
+    nodes: 4
+    topology: ring
+    arrival_window_s: 900.0
+    net.link_gbps: 10.0
+    background.gbps_per_node: 2.75
+    background.strict_priority: true
+    gpu.kv_gib: 24.0
+    workload.p_long: 0.2
+    cost.timeout_s: 120.0
+    thermal.mode: dynamic
+  spec:
+    t_swap.anchor: max_cluster
+    t_swap.offset_s: 40
+    t_swap.P_cap: 80
+    trace.kind: synthetic_pass
+    trace.compress_horizon_s: 60
+    trace.pack_window_s: 900
+    trace.target_n: 88
