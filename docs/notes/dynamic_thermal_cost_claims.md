@@ -68,6 +68,10 @@
 3. **调度**：节流触发后再迁、或放宽 `nmig`，避免节流前烧光迁移次数（单独不够，见探针）。  
 4. 不要指望只拧 `tau/R_th/T_throttle` 就能在当前二值自热 + 四节点满载上复现 README 主表。
 
+## 后续（已部分验证）与开放问题
+
+后续在 `docs/notes/dynamic_thermal_batch_hetero.md` 用 **pack + `max_busy_nodes`（+ 轻度异构）** 已造出相对 % 很大的 free ≫ place_once；针是批次化占用，不是异构 alone。但开放问题仍在：place_once 塌缩算不算公平 C1、free 离显式 `t_swap` 绝对分还差多少、pack 松紧 / 异构幅度、真·连续批 vs max_busy 语义、C2 稳定性——详见该文「补充问题 / 开放问题」。
+
 跑：
 
 ```bash

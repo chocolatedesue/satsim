@@ -88,3 +88,31 @@ seeds 1–3；工作负载对齐 s1 v3。
 .venv/bin/satsim configs/exp_ring_s1_dynamic_batch_v1.yaml
 .venv/bin/satsim configs/exp_ring_s1_dynamic_hetero_v1.yaml
 ```
+
+## 补充问题 / 开放问题
+
+pack+hetero 已能造出相对 % 很大的 free ≫ place_once，但机制与「公平 C1」是否同构仍未闭合。记下待答：
+
+1. **place_once 塌缩 vs 公平 C1**  
+   本 run 的相对增益主要来自 place_once good_long 塌到 ~1（热堆粘在 1–2 星），而非 free 相对「健康首次」抬升。这算不算论文可用的 C1？还是必须要求 place_once 仍保持合理绝对分、free 再拉开？
+
+2. **free 离显式 `t_swap` 还要多近**  
+   显式基线 free≈19.2 / goodput≈356；本动态 pack+hetero free≈10 / ≈193。差距应归因于缺显式暗/亮不对称、二值功率、还是 pack 本身的容量上限？要把 free 推到什么绝对区间才算「追上叙事」？
+
+3. **pack 松紧**  
+   `max_busy_nodes=2`（四星环）是否过紧？试 1 vs 2 vs 3：塌缩会否消失、C1 是否仍在、空闲冷却星是否仍够？
+
+4. **异构幅度**  
+   当前轻度 `*_by_node` / `sun_bias`  alone 无效、叠 pack 才抬 free 并理顺 C2。加大异构会否 alone 奏效？或过强把随机臂也「碰巧」变好/变差？
+
+5. **batch 语义：真连续批 vs `max_busy_nodes`**  
+   现实现是放置策略上限忙节点数，不是真实 continuous-batch / 共享 KV 语义。论文若写「批次占用」，审稿人是否要求更贴近真实批调度？若要，引擎缺口在哪？
+
+6. **C2 干净度**  
+   仅 pack 时 random > free（C2 反了）；加轻度异构后 random < free。该 C2 是否稳定（更多 seeds / 扰动）？random 掉分是迁移代价还是热路径噪声？
+
+7. **下一步实验（优先草稿）**  
+   - 扫 `max_busy_nodes` ∈ {1,2,3} ×（有/无 hetero）  
+   - 对照：同 pack 下显式 `t_swap` vs dynamic，拆绝对分差距  
+   - 若叙事需要「非塌缩 C1」：抬 place_once（更松 pack 或负载比例功率）再看 free 是否仍领先  
+   - 可选：真·连续批或负载连续功率，验证 batch 语义假设
